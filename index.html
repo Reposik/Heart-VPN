@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEART VPN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Gothic A1', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            text-align: center;
+            background-color: #080808; /* Очень темный фон для контраста */
+            padding: 60px 80px;
+            border-radius: 5px;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.2); /* Красное неоновое свечение */
+        }
+        .logo-container {
+            margin-bottom: 30px;
+        }
+        h1 {
+            font-size: 50px;
+            font-weight: 900;
+            color: #ff0000;
+            margin: 0;
+            letter-spacing: -2px;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+        }
+        p {
+            color: #555;
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 50px;
+            font-weight: 400;
+        }
+        .download-btn {
+            display: inline-block;
+            padding: 22px 60px;
+            background-color: #ff0000;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 20px;
+            border: 2px solid #ff0000;
+            transition: all 0.4s ease-in-out;
+            border-radius: 3px;
+            letter-spacing: 1px;
+        }
+        .download-btn:hover {
+            background-color: transparent;
+            box-shadow: 0 0 40px #ff0000;
+            color: #ff0000;
+        }
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            font-size: 10px;
+            color: #333;
+            letter-spacing: 1px;
+        }
+
+        /* SVG Logo Styling */
+        .heart-svg {
+            width: 150px; /* Размер логотипа */
+            height: 150px;
+            filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.7)); /* Небольшое свечение для сердца */
+        }
+        .heart-path {
+            fill: none;
+            stroke: #ff0000; /* Красный цвет сердца */
+            stroke-width: 8; /* Толщина линии сердца */
+            stroke-linejoin: round;
+            stroke-linecap: round;
+        }
+        .vpn-text {
+            fill: #00ffff; /* Голубой цвет текста VPN */
+            font-family: 'Gothic A1', sans-serif;
+            font-weight: 700; /* Жирный шрифт для VPN */
+            font-size: 35px; /* Размер текста VPN */
+            text-anchor: middle;
+            dominant-baseline: central;
+            filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.5)); /* Голубое неоновое свечение для текста */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <svg class="heart-svg" viewBox="0 0 200 180">
+                <path class="heart-path" d="M100,20 C140,-10 210,30 180,90 C150,150 100,170 100,170 C100,170 50,150 20,90 C-10,30 60,-10 100,20 Z" />
+                <text class="vpn-text" x="100" y="90">VPN</text>
+            </svg>
+        </div>
+        <h1>HEART VPN</h1>
+        <p>ULTIMATE CLOUD BYPASS SYSTEM</p>
+        
+        <a href="./HeartVPN_v1.zip" download="HeartVPN_v1.zip" class="download-btn">
+            DOWNLOAD ZIP
+        </a>
+    </div>
+    <div class="footer">© 2026 HEART VPN</div>
+</body>
+</html>
