@@ -1,124 +1,129 @@
-import os, sys, json, time, threading, subprocess, zipfile, requests, winreg, psutil
+import os, sys, json, time, threading, subprocess, zipfile, requests, winreg
 import customtkinter as ctk
 from datetime import datetime
 
 # =================================================================
-# HEART VPN - GOTHIC EDITION (AZER EXCLUSIVE)
-# FONTS: GOTHIC ONE STYLE | COLORS: PURE BLACK
+# HEART VPN - ULTIMATE GOTHIC MONOLITH
+# WORKER: curly-wave-032c.hameleonrblx.workers.dev
 # =================================================================
 
-class HeartVPN_Engine:
+class HeartVPN_System:
     def __init__(self):
-        self.root = os.path.join(os.environ['LOCALAPPDATA'], 'HeartVPN_Gothic')
+        self.root = os.path.join(os.environ['LOCALAPPDATA'], 'HeartVPN_Final')
         self.bin = os.path.join(self.root, 'bin')
-        self.core = os.path.join(self.bin, 'xray.exe')
-        self.cfg = os.path.join(self.bin, 'config.json')
-        self.servers = [
-            {"name": "HEART-0101", "ip": "185.255.1.1", "uuid": "ef87346a-7230-4e5c-9d6c-2f3b89e3456d"},
-            {"name": "HEART-0102", "ip": "95.216.2.2", "uuid": "7a8b9c0d-1234-5678-90ab-cdef12345678"},
-            {"name": "HEART-0103", "ip": "45.13.132.11", "uuid": "00000000-0000-0000-0000-000000000000"}
-        ]
+        self.core_exe = os.path.join(self.bin, 'xray.exe')
+        self.config_p = os.path.join(self.bin, 'config.json')
+        
+        # ТВОИ ЖИВЫЕ ДАННЫЕ
+        self.worker_url = "curly-wave-032c.hameleonrblx.workers.dev" 
+        self.uuid = "9a2e775b-ab2f-4f45-af3f-0b5664fb7c61"
+        
         if not os.path.exists(self.bin): os.makedirs(self.bin)
 
-    def download(self, log_cb):
-        if os.path.exists(self.core): return True
-        log_cb("INITIALIZING CORE DOWNLOAD...")
+    def download_core(self, log_func):
+        if os.path.exists(self.core_exe): return True
+        log_func("DOWNLOADING CORE ENGINE...")
         try:
-            r = requests.get("https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip")
-            with open(os.path.join(self.root, "c.zip"), 'wb') as f: f.write(r.content)
-            with zipfile.ZipFile(os.path.join(self.root, "c.zip"), 'r') as z: z.extractall(self.bin)
+            # Прямая ссылка на официальный стабильный Xray
+            r = requests.get("https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip", timeout=20)
+            zip_p = os.path.join(self.root, "temp.zip")
+            with open(zip_p, 'wb') as f: f.write(r.content)
+            with zipfile.ZipFile(zip_p, 'r') as z: z.extractall(self.bin)
+            os.remove(zip_p)
             return True
-        except: return False
+        except Exception as e:
+            log_func(f"DL ERROR: {e}")
+            return False
 
-    def build_cfg(self, srv):
-        c = {
-            "inbounds": [{"port": 10809, "protocol": "socks", "settings": {"udp": True}}],
+    def build_config(self):
+        # Конфиг под твой Cloudflare Worker
+        cfg = {
+            "log": {"loglevel": "none"},
+            "inbounds": [{"port": 10809, "listen": "127.0.0.1", "protocol": "socks", "settings": {"udp": True}}],
             "outbounds": [{
                 "protocol": "vless",
-                "settings": {"vnext": [{"address": srv["ip"], "port": 443, "users": [{"id": srv["uuid"], "flow": "xtls-rprx-vision"}]}]},
-                "streamSettings": {"network": "tcp", "security": "reality", "realitySettings": {"fingerprint": "chrome", "serverName": "google.com"}}
+                "settings": {
+                    "vnext": [{
+                        "address": self.worker_url,
+                        "port": 443,
+                        "users": [{"id": self.uuid, "encryption": "none"}]
+                    }]
+                },
+                "streamSettings": {
+                    "network": "ws",
+                    "security": "tls",
+                    "tlsSettings": {"serverName": self.worker_url},
+                    "wsSettings": {"path": "/"}
+                }
             }, {"protocol": "freedom", "tag": "direct"}]
         }
-        with open(self.cfg, 'w') as f: json.dump(c, f)
+        with open(self.config_p, 'w') as f: json.dump(cfg, f, indent=4)
 
-class App(ctk.CTk):
-    def __init__(self):
+class HeartUI(ctk.CTk):
+    def __init__(self, vpn):
         super().__init__()
-        self.engine = HeartVPN_Engine()
-        self.active_srv = self.engine.servers[0]
-        
-        # UI SETTINGS
-        self.title("HEART VPN")
+        self.vpn = vpn
+        self.title("HEART VPN PRO")
         self.geometry("850x550")
-        ctk.set_appearance_mode("dark")
-        self.configure(fg_color="#000000") # ЧЕРНЫЙ ФОН
-
-        # FONTS (Gothic Style)
-        self.main_font = ("Gothic A1", 24, "bold")
-        self.ui_font = ("Gothic A1", 14)
-
-        # SIDEBAR
-        self.side = ctk.CTkFrame(self, width=220, fg_color="#050505", corner_radius=0)
-        self.side.pack(side="left", fill="y")
-
-        ctk.CTkLabel(self.side, text="HEART", font=("Gothic A1", 36, "bold"), text_color="#FF0000").pack(pady=30)
+        self.configure(fg_color="#000000")
         
-        self.srv_select = ctk.CTkOptionMenu(self.side, values=[s["name"] for s in self.engine.servers], 
-                                            command=self.set_srv, fg_color="#111", button_color="#222", font=self.ui_font)
-        self.srv_select.pack(pady=20, padx=10)
+        # Заголовок в стиле Gothic One
+        self.logo = ctk.CTkLabel(self, text="HEART", font=("Gothic A1", 50, "bold"), text_color="#FF0000")
+        self.logo.pack(pady=(40, 10))
+        
+        self.status = ctk.CTkLabel(self, text="SYSTEM STANDBY", font=("Gothic A1", 16), text_color="#444")
+        self.status.pack(pady=10)
 
-        # MAIN AREA
-        self.main = ctk.CTkFrame(self, fg_color="#000000")
-        self.main.pack(side="right", fill="both", expand=True)
+        # Кнопка ENGAGE
+        self.btn = ctk.CTkButton(self, text="ENGAGE", width=260, height=70, corner_radius=0,
+                                 fg_color="#FF0000", hover_color="#990000", 
+                                 font=("Gothic A1", 22, "bold"), command=self.toggle)
+        self.btn.pack(pady=30)
 
-        self.status = ctk.CTkLabel(self.main, text="SYSTEM READY", font=self.main_font, text_color="#333")
-        self.status.pack(pady=40)
-
-        self.power = ctk.CTkButton(self.main, text="ENGAGE", width=200, height=60, corner_radius=0,
-                                   fg_color="#FF0000", hover_color="#880000", font=self.main_font,
-                                   command=self.toggle)
-        self.power.pack(pady=20)
-
-        self.log_box = ctk.CTkTextbox(self.main, height=150, fg_color="#050505", border_color="#111", border_width=1, text_color="#555")
-        self.log_box.pack(fill="x", padx=30, pady=20)
+        # Консоль логов
+        self.console = ctk.CTkTextbox(self, height=160, fg_color="#050505", border_color="#111", 
+                                      border_width=1, text_color="#00FF00", font=("Consolas", 12))
+        self.console.pack(fill="x", padx=50, pady=20)
+        self.log("HEART VPN READY. ALL SYSTEMS GO.")
         self.proc = None
 
-    def set_srv(self, name):
-        for s in self.engine.servers:
-            if s["name"] == name: self.active_srv = s
-
     def log(self, t):
-        self.log_box.insert("end", f"> {t}\n"); self.log_box.see("end")
+        self.console.insert("end", f"> {t}\n"); self.console.see("end")
 
     def toggle(self):
-        if self.power.cget("text") == "ENGAGE":
+        if self.btn.cget("text") == "ENGAGE":
             threading.Thread(target=self.start, daemon=True).start()
         else:
             self.stop()
 
-    def start(self):
-        self.status.configure(text="PUMPING...", text_color="red")
-        if self.engine.download(self.log):
-            self.engine.build_cfg(self.active_srv)
-            self.proc = subprocess.Popen([self.engine.core, "run", "-c", self.engine.cfg], creationflags=0x08000000)
-            
-            # Включаем прокси в реестре
+    def set_proxy(self, status):
+        try:
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, winreg.KEY_WRITE)
-            winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 1)
+            winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 1 if status else 0)
             winreg.SetValueEx(key, "ProxyServer", 0, winreg.REG_SZ, "127.0.0.1:10809")
-            
-            self.power.configure(text="DISCONNECT", fg_color="#333")
+            winreg.CloseKey(key)
+        except: pass
+
+    def start(self):
+        self.status.configure(text="PUMPING...", text_color="#FFFF00")
+        if self.vpn.download_core(self.log):
+            self.vpn.build_config()
+            self.proc = subprocess.Popen([self.vpn.core_exe, "run", "-c", self.vpn.config_p], 
+                                         creationflags=0x08000000)
+            self.set_proxy(True)
+            self.btn.configure(text="DISCONNECT", fg_color="#222")
             self.status.configure(text="HEART ACTIVE", text_color="#FF0000")
-            self.log(f"TUNNEL OPENED: {self.active_srv['name']}")
+            self.log(f"TUNNEL OPEN: {self.vpn.worker_url}")
 
     def stop(self):
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, winreg.KEY_WRITE)
-        winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 0)
+        self.set_proxy(False)
         if self.proc: self.proc.terminate()
         os.system("taskkill /f /im xray.exe >nul 2>&1")
-        self.power.configure(text="ENGAGE", fg_color="#FF0000")
-        self.status.configure(text="SYSTEM READY", text_color="#333")
+        self.btn.configure(text="ENGAGE", fg_color="#FF0000")
+        self.status.configure(text="SYSTEM STANDBY", text_color="#444")
         self.log("TUNNEL CLOSED.")
 
 if __name__ == "__main__":
-    App().mainloop()
+    vpn_logic = HeartVPN_System()
+    app = HeartUI(vpn_logic)
+    app.mainloop()
