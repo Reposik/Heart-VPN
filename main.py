@@ -1,148 +1,124 @@
-import os
-import sys
-import json
-import time
-import socket
-import threading
-import subprocess
-import zipfile
-import requests
-import winreg
-import ctypes
-import psutil
+import os, sys, json, time, threading, subprocess, zipfile, requests, winreg, psutil
 import customtkinter as ctk
 from datetime import datetime
 
 # =================================================================
-# HEART VPN - PUBLIC INFRASTRUCTURE EDITION
-# VERSION: 3.0.0 | BYPASS MASTER: AZER
+# HEART VPN - GOTHIC EDITION (AZER EXCLUSIVE)
+# FONTS: GOTHIC ONE STYLE | COLORS: PURE BLACK
 # =================================================================
 
-class HeartVPN_Public:
+class HeartVPN_Engine:
     def __init__(self):
-        self.root_dir = os.path.join(os.environ['LOCALAPPDATA'], 'HeartVPN_Public')
-        self.bin_dir = os.path.join(self.root_dir, 'bin')
-        self.core_exe = os.path.join(self.bin_dir, 'xray.exe')
-        self.config_path = os.path.join(self.bin_dir, 'public_config.json')
-        
-        # ПУБЛИЧНЫЕ СЕРВЕРА (Сюда вписываешь свои данные)
+        self.root = os.path.join(os.environ['LOCALAPPDATA'], 'HeartVPN_Gothic')
+        self.bin = os.path.join(self.root, 'bin')
+        self.core = os.path.join(self.bin, 'xray.exe')
+        self.cfg = os.path.join(self.bin, 'config.json')
         self.servers = [
-            {"name": "HEART-NL-1", "ip": "185.255.1.1", "uuid": "ef87346a-7230-4e5c-9d6c-2f3b89e3456d", "port": 443},
-            {"name": "HEART-DE-2", "ip": "95.216.2.2", "uuid": "7a8b9c0d-1234-5678-90ab-cdef12345678", "port": 443},
-            {"name": "VAPI-SPECIAL", "ip": "1.2.3.4", "uuid": "00000000-0000-0000-0000-000000000000", "port": 443}
+            {"name": "HEART-0101", "ip": "185.255.1.1", "uuid": "ef87346a-7230-4e5c-9d6c-2f3b89e3456d"},
+            {"name": "HEART-0102", "ip": "95.216.2.2", "uuid": "7a8b9c0d-1234-5678-90ab-cdef12345678"},
+            {"name": "HEART-0103", "ip": "45.13.132.11", "uuid": "00000000-0000-0000-0000-000000000000"}
         ]
-        
-        self.active_server = self.servers[0]
-        self.process = None
-        
-        if not os.path.exists(self.bin_dir):
-            os.makedirs(self.bin_dir)
+        if not os.path.exists(self.bin): os.makedirs(self.bin)
 
-    def download_core(self, log):
-        if os.path.exists(self.core_exe): return True
-        log("Downloading Public Core...")
-        url = "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip"
+    def download(self, log_cb):
+        if os.path.exists(self.core): return True
+        log_cb("INITIALIZING CORE DOWNLOAD...")
         try:
-            r = requests.get(url)
-            with open(os.path.join(self.root_dir, "temp.zip"), 'wb') as f: f.write(r.content)
-            with zipfile.ZipFile(os.path.join(self.root_dir, "temp.zip"), 'r') as z: z.extractall(self.bin_dir)
-            log("Public Core Ready.")
+            r = requests.get("https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip")
+            with open(os.path.join(self.root, "c.zip"), 'wb') as f: f.write(r.content)
+            with zipfile.ZipFile(os.path.join(self.root, "c.zip"), 'r') as z: z.extractall(self.bin)
             return True
         except: return False
 
-    def build_public_config(self):
-        """Конфигурация для подключения к PUBLIC серверу через Reality"""
-        config = {
-            "log": {"loglevel": "none"},
+    def build_cfg(self, srv):
+        c = {
             "inbounds": [{"port": 10809, "protocol": "socks", "settings": {"udp": True}}],
-            "outbounds": [
-                {
-                    "protocol": "vless",
-                    "settings": {
-                        "vnext": [{
-                            "address": self.active_server["ip"],
-                            "port": self.active_server["port"],
-                            "users": [{"id": self.active_server["uuid"], "flow": "xtls-rprx-vision"}]
-                        }]
-                    },
-                    "streamSettings": {
-                        "network": "tcp", "security": "reality",
-                        "realitySettings": {"fingerprint": "chrome", "serverName": "google.com"}
-                    },
-                    "tag": "proxy"
-                },
-                {"protocol": "freedom", "tag": "direct"}
-            ],
-            "routing": {
-                "rules": [
-                    {"type": "field", "outboundTag": "proxy", "domain": ["geosite:youtube", "geosite:discord", "telegram.org"]},
-                    {"type": "field", "outboundTag": "direct", "domain": ["geosite:ru"]}
-                ]
-            }
+            "outbounds": [{
+                "protocol": "vless",
+                "settings": {"vnext": [{"address": srv["ip"], "port": 443, "users": [{"id": srv["uuid"], "flow": "xtls-rprx-vision"}]}]},
+                "streamSettings": {"network": "tcp", "security": "reality", "realitySettings": {"fingerprint": "chrome", "serverName": "google.com"}}
+            }, {"protocol": "freedom", "tag": "direct"}]
         }
-        with open(self.config_path, 'w') as f: json.dump(config, f, indent=4)
-
-    def manage_proxy(self, state):
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, winreg.KEY_WRITE)
-        winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 1 if state else 0)
-        winreg.SetValueEx(key, "ProxyServer", 0, winreg.REG_SZ, "127.0.0.1:10809")
+        with open(self.cfg, 'w') as f: json.dump(c, f)
 
 class App(ctk.CTk):
-    def __init__(self, vpn):
+    def __init__(self):
         super().__init__()
-        self.vpn = vpn
-        self.title("HEART VPN PUBLIC")
-        self.geometry("1000x650")
+        self.engine = HeartVPN_Engine()
+        self.active_srv = self.engine.servers[0]
         
-        # Дизайн
-        self.sidebar = ctk.CTkFrame(self, width=250)
-        self.sidebar.pack(side="left", fill="y", padx=10, pady=10)
+        # UI SETTINGS
+        self.title("HEART VPN")
+        self.geometry("850x550")
+        ctk.set_appearance_mode("dark")
+        self.configure(fg_color="#000000") # ЧЕРНЫЙ ФОН
+
+        # FONTS (Gothic Style)
+        self.main_font = ("Gothic A1", 24, "bold")
+        self.ui_font = ("Gothic A1", 14)
+
+        # SIDEBAR
+        self.side = ctk.CTkFrame(self, width=220, fg_color="#050505", corner_radius=0)
+        self.side.pack(side="left", fill="y")
+
+        ctk.CTkLabel(self.side, text="HEART", font=("Gothic A1", 36, "bold"), text_color="#FF0000").pack(pady=30)
         
-        ctk.CTkLabel(self.sidebar, text="HEART PUBLIC", font=("Impact", 30), text_color="#FF3333").pack(pady=20)
-        
-        # Выбор сервера
-        ctk.CTkLabel(self.sidebar, text="ВЫБЕРИ СЕРВЕР:").pack(pady=5)
-        self.server_menu = ctk.CTkOptionMenu(self.sidebar, values=[s["name"] for s in self.vpn.servers], command=self.change_srv)
-        self.server_menu.pack(pady=10)
+        self.srv_select = ctk.CTkOptionMenu(self.side, values=[s["name"] for s in self.engine.servers], 
+                                            command=self.set_srv, fg_color="#111", button_color="#222", font=self.ui_font)
+        self.srv_select.pack(pady=20, padx=10)
 
-        self.main_area = ctk.CTkFrame(self, fg_color="#050505")
-        self.main_area.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+        # MAIN AREA
+        self.main = ctk.CTkFrame(self, fg_color="#000000")
+        self.main.pack(side="right", fill="both", expand=True)
 
-        self.btn_power = ctk.CTkButton(self.main_area, text="START PUBLIC VPN", width=300, height=80, 
-                                       corner_radius=40, font=("Arial", 20, "bold"), fg_color="#333",
-                                       hover_color="#555", command=self.run_vpn)
-        self.btn_power.pack(expand=True)
+        self.status = ctk.CTkLabel(self.main, text="SYSTEM READY", font=self.main_font, text_color="#333")
+        self.status.pack(pady=40)
 
-        self.log_box = ctk.CTkTextbox(self.main_area, height=200, fg_color="#000", text_color="#00FF00")
-        self.log_box.pack(fill="x", padx=20, pady=20)
+        self.power = ctk.CTkButton(self.main, text="ENGAGE", width=200, height=60, corner_radius=0,
+                                   fg_color="#FF0000", hover_color="#880000", font=self.main_font,
+                                   command=self.toggle)
+        self.power.pack(pady=20)
 
-    def change_srv(self, name):
-        for s in self.vpn.servers:
-            if s["name"] == name: self.vpn.active_server = s
+        self.log_box = ctk.CTkTextbox(self.main, height=150, fg_color="#050505", border_color="#111", border_width=1, text_color="#555")
+        self.log_box.pack(fill="x", padx=30, pady=20)
+        self.proc = None
+
+    def set_srv(self, name):
+        for s in self.engine.servers:
+            if s["name"] == name: self.active_srv = s
 
     def log(self, t):
         self.log_box.insert("end", f"> {t}\n"); self.log_box.see("end")
 
-    def run_vpn(self):
-        if self.btn_power.cget("text") == "START PUBLIC VPN":
+    def toggle(self):
+        if self.power.cget("text") == "ENGAGE":
             threading.Thread(target=self.start, daemon=True).start()
         else:
             self.stop()
 
     def start(self):
-        if self.vpn.download_core(self.log):
-            self.vpn.build_public_config()
-            self.vpn.process = subprocess.Popen([self.vpn.core_exe, "run", "-c", self.vpn.config_path], creationflags=0x08000000)
-            self.vpn.manage_proxy(True)
-            self.btn_power.configure(text="STOP VPN", fg_color="#FF3333")
-            self.log(f"Connected to {self.vpn.active_server['name']}")
+        self.status.configure(text="PUMPING...", text_color="red")
+        if self.engine.download(self.log):
+            self.engine.build_cfg(self.active_srv)
+            self.proc = subprocess.Popen([self.engine.core, "run", "-c", self.engine.cfg], creationflags=0x08000000)
+            
+            # Включаем прокси в реестре
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, winreg.KEY_WRITE)
+            winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 1)
+            winreg.SetValueEx(key, "ProxyServer", 0, winreg.REG_SZ, "127.0.0.1:10809")
+            
+            self.power.configure(text="DISCONNECT", fg_color="#333")
+            self.status.configure(text="HEART ACTIVE", text_color="#FF0000")
+            self.log(f"TUNNEL OPENED: {self.active_srv['name']}")
 
     def stop(self):
-        self.vpn.manage_proxy(False)
-        if self.vpn.process: self.vpn.process.terminate()
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Internet Settings", 0, winreg.KEY_WRITE)
+        winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 0)
+        if self.proc: self.proc.terminate()
         os.system("taskkill /f /im xray.exe >nul 2>&1")
-        self.btn_power.configure(text="START PUBLIC VPN", fg_color="#333")
-        self.log("Disconnected.")
+        self.power.configure(text="ENGAGE", fg_color="#FF0000")
+        self.status.configure(text="SYSTEM READY", text_color="#333")
+        self.log("TUNNEL CLOSED.")
 
 if __name__ == "__main__":
-    App(HeartVPN_Public()).mainloop()
+    App().mainloop()
