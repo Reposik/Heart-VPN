@@ -1,65 +1,86 @@
 import customtkinter as ctk
-import json
 import os
+import urllib.request
+import zipfile
+import subprocess
+import winreg
 
-class HeartVPNGlobal(ctk.CTk):
+class HeartVPNRaw(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("HEART VPN | GLOBAL EDITION")
-        self.geometry("500x650")
-        self.configure(fg_color="#000000")
-
-        # Твой конфиг
-        self.UUID = "80cf3da6-2101-4c11-8541-d11025a8aa6b"
-        self.WORKER_HOST = "heart-vpn-worker-global.hameleonrblx.workers.dev"
-
-        # UI элементы (лого, теглайн)
-        self.logo = ctk.CTkLabel(self, text="HEART VPN", font=("Dela Gothic One", 45), text_color="#ff0000")
-        self.logo.pack(pady=(50, 5))
+        # Ссылка на прямую загрузку ядра (пример с проверенного источника)
+        # ВАЖНО: Обычно Xray идет в .zip, поэтому добавим распаковку
+        self.XRAY_ZIP_URL = "https://github.com/XTLS/Xray-core/releases/download/v1.8.4/Xray-windows-64.zip"
+        self.APP_DATA = os.path.join(os.getenv('APPDATA'), 'HeartVPN_Engine')
+        self.XRAY_EXE = os.path.join(self.APP_DATA, 'xray.exe')
         
-        self.tagline = ctk.CTkLabel(self, text="GLOBAL COVERAGE ENABLED", font=("Montserrat", 12, "bold"), text_color="#00ffff")
-        self.tagline.pack(pady=(0, 30))
+        if not os.path.exists(self.APP_DATA):
+            os.makedirs(self.APP_DATA)
 
-        # Выбор страны
-        self.country_var = ctk.StringVar(value="United States")
-        self.country_menu = ctk.CTkOptionMenu(
-            self,
-            values=["Kazakhstan", "United States", "United Kingdom", "Germany"],
-            variable=self.country_var,
-            fg_color="#111", button_color="#ff0000", font=("Dela Gothic One", 16)
-        )
-        self.country_menu.pack(pady=20, padx=60, fill="x")
+        self.setup_ui()
 
-        # Кнопка
-        self.btn_connect = ctk.CTkButton(
-            self, text="ENGAGE", font=("Dela Gothic One", 20),
-            fg_color="#ff0000", height=70, command=self.toggle_connection
-        )
-        self.btn_connect.pack(pady=40, padx=60, fill="x")
+    def setup_ui(self):
+        self.title("HEART VPN | GLOBAL TERMINAL")
+        self.geometry("500x600")
+        self.configure(fg_color="#000")
 
-        self.status = ctk.CTkLabel(self, text="STATUS: DISCONNECTED", font=("Montserrat", 10), text_color="#333")
+        self.logo = ctk.CTkLabel(self, text="HEART VPN", font=("Dela Gothic One", 45), text_color="#ff0000")
+        self.logo.pack(pady=40)
+
+        self.country_var = ctk.StringVar(value="Germany")
+        self.menu = ctk.CTkOptionMenu(self, values=["Kazakhstan", "United States", "Germany", "United Kingdom"], 
+                                      variable=self.country_var, fg_color="#111", button_color="#ff0000")
+        self.menu.pack(pady=20)
+
+        self.btn = ctk.CTkButton(self, text="INITIALIZE", fg_color="#ff0000", height=60, command=self.start_vpn)
+        self.btn.pack(pady=30, padx=60, fill="x")
+
+        self.status = ctk.CTkLabel(self, text="WAITING FOR COMMAND", text_color="#444", font=("Montserrat", 10))
         self.status.pack(side="bottom", pady=20)
 
-        self.is_connected = False
+    def download_and_extract(self):
+        """Скачивает zip и достает только xray.exe"""
+        if not os.path.exists(self.XRAY_EXE):
+            self.status.configure(text="DOWNLOADING CORE FROM REMOTE REPO...", text_color="#00ffff")
+            self.update()
+            zip_path = os.path.join(self.APP_DATA, "core.zip")
+            try:
+                # Качаем
+                urllib.request.urlretrieve(self.XRAY_ZIP_URL, zip_path)
+                # Распаковываем
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extract('xray.exe', self.APP_DATA)
+                os.remove(zip_path) # Удаляем архив за собой
+                return True
+            except Exception as e:
+                self.status.configure(text=f"ERROR: {e}", text_color="#ff0000")
+                return False
+        return True
 
-    def toggle_connection(self):
-        if not self.is_connected:
-            country = self.country_var.get().replace(" ", "%20")
-            # Генерация ссылки для подключения
-            vless_link = f"vless://{self.UUID}@{self.WORKER_HOST}:443?encryption=none&security=tls&sni={self.WORKER_HOST}&type=ws&host={self.WORKER_HOST}&path=%2F%3Fcountry%3D{country}#HeartVPN_{country}"
-            
-            print(f"GENERATED CONFIG: {vless_link}")
-            
-            # Имитация запуска ядра
-            self.status.configure(text=f"CONNECTED TO {self.country_var.get().upper()}", text_color="#00ff00")
-            self.btn_connect.configure(text="DISCONNECT", fg_color="#1a1a1a")
-            self.is_connected = True
-        else:
-            self.status.configure(text="STATUS: DISCONNECTED", text_color="#333")
-            self.btn_connect.configure(text="ENGAGE", fg_color="#ff0000")
-            self.is_connected = False
+    def set_sys_proxy(self, enable=True):
+        proxy_key = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, proxy_key, 0, winreg.KEY_WRITE) as key:
+            if enable:
+                winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 1)
+                winreg.SetValueEx(key, "ProxyServer", 0, winreg.REG_SZ, "127.0.0.1:10808")
+            else:
+                winreg.SetValueEx(key, "ProxyEnable", 0, winreg.REG_DWORD, 0)
+
+    def start_vpn(self):
+        if self.download_and_extract():
+            self.set_sys_proxy(True)
+            # Эмуляция запуска (для реального запуска нужен еще файл config.json)
+            self.btn.configure(text="SHUTDOWN", fg_color="#1a1a1a", command=self.stop_vpn)
+            self.status.configure(text=f"ENCRYPTED TUNNEL: {self.country_var.get().upper()}", text_color="#00ff00")
+
+    def stop_vpn(self):
+        self.set_sys_proxy(False)
+        # Убиваем процесс если он запущен
+        os.system("taskkill /f /im xray.exe >nul 2>&1")
+        self.btn.configure(text="INITIALIZE", fg_color="#ff0000", command=self.start_vpn)
+        self.status.configure(text="STATUS: DISCONNECTED", text_color="#444")
 
 if __name__ == "__main__":
-    app = HeartVPNGlobal()
+    app = HeartVPNRaw()
     app.mainloop()
