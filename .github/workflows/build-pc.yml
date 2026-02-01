@@ -24,7 +24,7 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller --noconfirm --onefile --windowed --name "HeartVPN_Public_Pro" main.py
+        pyinstaller --noconfirm --onefile --windowed --name "HeartVPN_Public_Pro" main-pc.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
