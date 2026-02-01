@@ -1,0 +1,1 @@
+CompanyName=HeartVPN Team, FileDescription=Heart VPN Global, Version=1.0.2.
