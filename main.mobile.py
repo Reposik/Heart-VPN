@@ -136,4 +136,4 @@ def main(page: ft.Page):
         ft.Text("v1.0.4 PRO BUILD", size=9, color="#222")
     )
 
-ft.app(target=main)
+ft.app(target=main) 
